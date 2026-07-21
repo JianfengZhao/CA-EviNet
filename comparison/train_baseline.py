@@ -2,7 +2,7 @@
 (same patient-level 5-fold split, same 3-view 16-frame grayscale input, same
 metrics). Classification only. Saves test metrics into comparison/<model>/.
 
-Usage: CAE_TASK2=none python comparison/train_baseline.py --model resnet --fold 0
+Usage: python comparison/train_baseline.py --model resnet --fold 0
 """
 import os, sys, json, time, math, argparse
 import numpy as np

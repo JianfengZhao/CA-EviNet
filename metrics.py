@@ -1,24 +1,22 @@
-"""Evaluation metrics for the success prediction and the quantification task.
+"""Evaluation metrics for the classification and quantification tasks.
 
-Four groups, matching the paper's Implementation section:
-  (i)  discrimination : ACC, AUC, AP, sensitivity, specificity, F1
-  (ii) calibration    : ECE, Brier
-  (iii) uncertainty   : AURC (selective prediction), uncertainty->error AUC
-  (iv) quantification : per-measurement MAE, RMSE, Pearson r
+  (i)   discrimination : ACC, AUC, AP, sensitivity, specificity, F1
+  (ii)  calibration    : ECE, Brier
+  (iii) uncertainty    : AURC (selective prediction), uncertainty->error AUC
+  (iv)  quantification : per-measurement MAE, RMSE, Pearson r
 
-Convention: the FAILURE class is taken as positive for sensitivity/specificity/F1/AP,
-so sensitivity is the ability to flag patients unlikely to benefit (the minority class).
-AUC is computed on the success probability and is invariant to this choice.
+The minority class is taken as positive for sensitivity/specificity/F1/AP; AUC is
+computed on the class-1 probability and is invariant to this choice.
 """
 import numpy as np
 from sklearn.metrics import (roc_auc_score, accuracy_score,
                              average_precision_score, f1_score)
 
 
-def expected_calibration_error(y, p_success, n_bins=10):
-    """p_success: predicted probability of the positive (success) class."""
-    conf = np.where(p_success >= 0.5, p_success, 1 - p_success)
-    pred = (p_success >= 0.5).astype(int)
+def expected_calibration_error(y, p_pos, n_bins=10):
+    """p_pos: predicted probability of the positive class."""
+    conf = np.where(p_pos >= 0.5, p_pos, 1 - p_pos)
+    pred = (p_pos >= 0.5).astype(int)
     correct = (pred == y).astype(float)
     bins = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
@@ -30,14 +28,14 @@ def expected_calibration_error(y, p_success, n_bins=10):
     return float(ece)
 
 
-def brier_score(y, p_success):
-    return float(np.mean((p_success - y) ** 2))
+def brier_score(y, p_pos):
+    return float(np.mean((p_pos - y) ** 2))
 
 
 def classification_metrics(y, p1, pos_label=0):
     """y: (N,) 0/1 labels; p1: (N,) predicted prob of class 1.
     `pos_label` is the class treated as positive for sens/spec/F1/AP (the minority
-    class of the task: degenerative=0 for etiology, present=1 for MAC). AUC is
+    class of the task (degenerative = 0 for etiology). AUC is
     computed on the class-1 probability and is invariant to this choice."""
     y = np.asarray(y).astype(int)
     p = np.asarray(p1).astype(float)
@@ -74,12 +72,12 @@ def classification_metrics(y, p1, pos_label=0):
     }
 
 
-def selective_prediction_aurc(y, p_success, uncertainty):
+def selective_prediction_aurc(y, p_pos, uncertainty):
     """Area under the risk-coverage curve. Lower is better: deferring the most
     uncertain cases should leave a lower error rate on the retained ones.
     uncertainty: (N,) higher = less confident."""
     y = np.asarray(y).astype(int)
-    err = ((np.asarray(p_success) >= 0.5).astype(int) != y).astype(float)
+    err = ((np.asarray(p_pos) >= 0.5).astype(int) != y).astype(float)
     order = np.argsort(np.asarray(uncertainty))          # most confident first
     err_sorted = err[order]
     n = len(y)
@@ -89,10 +87,10 @@ def selective_prediction_aurc(y, p_success, uncertainty):
     return float(cum_risk.mean())
 
 
-def uncertainty_error_auc(y, p_success, uncertainty):
+def uncertainty_error_auc(y, p_pos, uncertainty):
     """AUC of using uncertainty to detect misclassifications (higher is better)."""
     y = np.asarray(y).astype(int)
-    err = ((np.asarray(p_success) >= 0.5).astype(int) != y).astype(int)
+    err = ((np.asarray(p_pos) >= 0.5).astype(int) != y).astype(int)
     if len(np.unique(err)) < 2:
         return float("nan")
     try:

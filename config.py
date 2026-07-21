@@ -1,12 +1,8 @@
-"""Central configuration for CA-EviNet (Conflict-aware Evidential Network).
+"""Central configuration for CA-EviNet.
 
-JOINT version: a single model jointly characterizes TWO pathological targets from
-the grayscale 2/3/4-chamber TEE views -- the mitral-regurgitation etiology
-(functional vs. degenerative) and the presence of mitral annular calcification
-(MAC) -- plus an auxiliary regression of the M clinical measurements.
-
-Everything the training/testing code needs is here so a reader can see the whole
-setup in one place.
+CA-EviNet characterizes the mitral-regurgitation etiology (functional vs.
+degenerative) from three grayscale TEE views, plus an auxiliary regression of the
+clinical valve measurements. All hyperparameters and paths are defined here.
 """
 import os
 
@@ -33,37 +29,15 @@ IMG_SIZE   = 224
 IN_CH      = 1                         # grayscale
 NUM_CLASSES = 2                        # per task (K)
 
-# ---- classification targets (etiology is fixed; the 2nd task is configurable) ----
-# We validate the METHOD, so a task that is not image-learnable (e.g., MAC, whose
-# sensitivity was near chance) can be swapped for a better one via CAE_TASK2.
-# pos_label = the class taken as positive for sens/spec/F1/AP (the minority class).
-_ETIOLOGY = {"name": "etiology", "col": "Functional MR", "pos_label": 0}  # 0=degenerative (minority)
-_TASK2_DEFS = {
-    "mac":      {"name": "mac",      "col": "MAC",              "pos_label": 1},
-    "pseudo":   {"name": "pseudo",   "col": "Pseudoprolaps",    "pos_label": 1},
-    "leafcalc": {"name": "leafcalc", "col": "Leaflet.Calc",     "pos_label": 1},
-    "prolapse": {"name": "prolapse", "col": "Prolapse/Flail",   "pos_label": 1},
-    "barlow":   {"name": "barlow",   "col": "Barlow's disease", "pos_label": 1},
-}
-# FINAL design: a single classification task (etiology) + the auxiliary quantification.
-# The secondary pathology labels in the cohort are all imbalanced minority findings
-# and are not reliably image-learnable, so no 2nd classification task is used.
-# CAE_TASK2 = "none" (default) -> etiology only; or a name in _TASK2_DEFS to add one.
-TASK2 = os.environ.get("CAE_TASK2", "none")
-TASKS = [_ETIOLOGY] if TASK2 in ("none", "") else [_ETIOLOGY, _TASK2_DEFS[TASK2]]
+# Classification target: etiology (functional vs. degenerative).
+# pos_label = minority class taken as positive for sensitivity/specificity/F1/AP.
+_ETIOLOGY = {"name": "etiology", "col": "Functional MR", "pos_label": 0}  # 0 = degenerative
+TASKS = [_ETIOLOGY]
 TASK_NAMES = [t["name"] for t in TASKS]
 N_TASKS = len(TASKS)
 
-# Clinical measurements for the auxiliary quantification. The full 14 were probed;
-# only 4 are reliably recoverable from grayscale (Pearson r>=0.45 across 5 folds) and
-# they are exactly the etiology-discriminative geometry (leaflet angles, tenting area,
-# flail width). We keep only these; the other 10 (fine/low-contrast) are dropped.
-QUANT_COLS_FULL = [
-    "APd_ed", "APd_es", "AML_L_tot", "AML_L_mob", "PML_L_tot", "PML_L_mob",
-    "Aα", "Pα", "Tent_ht", "Tent_A", "Coapt/Flail_gap", "flail_width",
-    "AML_thickness", "PML_thickness",
-]
-QUANT_COLS = ["Aα", "Pα", "Tent_A", "flail_width"]   # the 4 image-recoverable measurements
+# The four clinically used measurements regressed by the auxiliary branch.
+QUANT_COLS = ["Aα", "Pα", "Tent_A", "flail_width"]
 M = len(QUANT_COLS)
 ID_COL    = "patient_id"
 
@@ -116,13 +90,10 @@ SEED       = 42
 DEVICE     = os.environ.get("CAE_DEVICE", "cuda")       # "cuda" or "cpu"
 CKPT_KEEP  = int(os.environ.get("CAE_CKPT_KEEP", "2"))  # keep best-K checkpoints per fold
 
-# which task's val AUC drives balanced-sampling when BALANCED_SAMPLER is on.
-# With two imbalanced tasks we balance on the etiology label by default; the
-# other task is handled by its own class weighting in the loss is not needed
-# because sampling is only a batch-composition heuristic.
+# which label drives class-balanced batch sampling when BALANCED_SAMPLER is on.
 SAMPLER_TASK = os.environ.get("CAE_SAMPLER_TASK", "etiology")
 
-# debug mode: tiny subset + few epochs, small backbone (set via env in debug script)
+# debug mode: tiny subset + few epochs for a quick sanity run
 DEBUG           = os.environ.get("CAE_DEBUG", "0") == "1"
 DEBUG_N_PATIENTS = 8
 DEBUG_EPOCHS     = 2

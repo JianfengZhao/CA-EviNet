@@ -2,7 +2,7 @@
 
 Pipeline (matches the paper's Method section and Algorithm 1):
   per view: T frames -> shared ViT-S/16 -> temporal Transformer -> view feature f_j
-  for each task tau in {etiology, mac}:
+  for the etiology task:
      task-specific evidential head -> e_j^tau -> Dirichlet(alpha_j) -> p_j, u_j
      conflict-aware RAL: inter-view conflict delta_j -> reliability weight w_j
                          -> aggregated evidence -> prob^tau, uncertainty U^tau

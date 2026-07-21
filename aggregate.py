@@ -1,7 +1,6 @@
 """Aggregate per-fold JOINT results into mean +/- std for the paper.
 
-Reads output/predictions/test_{tag}_fold*.json (flat keys like etiology_auc,
-mac_auc, quant_mae) and quant_{tag}_fold*.json, writes aggregate_{tag}.json and
+Reads output/predictions/test_{tag}_fold*.json (flat keys like etiology_auc, quant_mae) and quant_{tag}_fold*.json, writes aggregate_{tag}.json and
 prints a readable per-task summary. Safe to run any time (uses whatever folds
 have finished).
 """

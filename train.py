@@ -1,8 +1,7 @@
 """Train / evaluate the JOINT CA-EviNet for one patient-level fold.
 
-Jointly characterizes etiology (functional vs. degenerative) and MAC (present vs.
-absent), plus the auxiliary clinical quantification. Records everything a paper
-needs: per-epoch history (losses/lr/KL/metrics/time), per-fold config snapshot,
+Trains and evaluates CA-EviNet for one fold (etiology classification + auxiliary
+quantification). Records everything a paper needs: per-epoch history (losses/lr/KL/metrics/time), per-fold config snapshot,
 best-K checkpoints, per-task test metrics, per-measurement quantification, and the
 raw test-time arrays for all post-hoc figures.
 

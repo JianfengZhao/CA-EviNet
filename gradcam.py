@@ -1,6 +1,6 @@
 """Grad-CAM for CA-EviNet's frame ViT.
 
-We take the aggregated success evidence as the target score, back-propagate to the
+We take the aggregated evidence as the target score, back-propagate to the
 per-frame patch tokens, and form a class-discriminative heatmap for each view. This
 supports the interpretable pillar together with the clinical quantification.
 """

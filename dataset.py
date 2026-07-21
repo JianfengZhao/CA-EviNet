@@ -1,5 +1,5 @@
 """Patient-level dataset for the JOINT two-task setting. Each item is one patient:
-the available chamber views (each with T frames), BOTH task labels (etiology, MAC),
+the available chamber views (each with T frames), the task label,
 and the M normalized clinical measurements (with a NaN mask).
 
 Frames were already sector-isolated, letterboxed, and resized to 224x224 by the

@@ -1,7 +1,7 @@
-"""Six basic baseline classifiers for the etiology SOTA comparison.
+"""Baseline classifiers for the etiology SOTA comparison.
 
 All take one patient = (B, V=3, T=16, 1, 224, 224) and output 2-class logits.
-Kept intentionally simple/basic; the point is a fair reference, not tuning.
+Kept intentionally simple; the point is a fair reference, not tuning.
 """
 import os, sys
 import torch
@@ -36,78 +36,6 @@ class ResNetMV(nn.Module):
         x = _gray3(x.reshape(B * V, 1, C.IMG_SIZE, C.IMG_SIZE))
         f = self.feat(x).flatten(1).reshape(B, V, -1).mean(1)
         return self.fc(f)
-
-
-class NNUNetCls(nn.Module):
-    """nnU-Net-style self-configuring conv encoder (InstanceNorm + LeakyReLU +
-    strided conv), three views stacked as input channels (early fusion)."""
-    def __init__(self):
-        super().__init__()
-        ch = [3, 32, 64, 128, 256]; blocks = []
-        for i in range(4):
-            blocks += [nn.Conv2d(ch[i], ch[i + 1], 3, 2, 1), nn.InstanceNorm2d(ch[i + 1]),
-                       nn.LeakyReLU(0.01, True),
-                       nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1), nn.InstanceNorm2d(ch[i + 1]),
-                       nn.LeakyReLU(0.01, True)]
-        self.enc = nn.Sequential(*blocks); self.fc = nn.Linear(256, 2)
-
-    def forward(self, views):
-        B, V, T = views.shape[:3]
-        x = views[:, :, T // 2, 0]                       # (B,V,H,W), V=3 -> 3 channels
-        f = F.adaptive_avg_pool2d(self.enc(x), 1).flatten(1)
-        return self.fc(f)
-
-
-class R2Plus1D(nn.Module):
-    """(2+1)D spatiotemporal CNN (torchvision r2plus1d_18) per view; mean views."""
-    def __init__(self):
-        super().__init__()
-        from torchvision.models.video import r2plus1d_18, R2Plus1D_18_Weights
-        try:
-            net = r2plus1d_18(weights=R2Plus1D_18_Weights.KINETICS400_V1)
-        except Exception:
-            net = r2plus1d_18(weights=None)
-        self.backbone = nn.Sequential(net.stem, net.layer1, net.layer2, net.layer3,
-                                      net.layer4, net.avgpool)
-        self.fc = nn.Linear(512, 2)
-
-    def forward(self, views):
-        B, V, T = views.shape[:3]
-        feats = []
-        for v in range(V):
-            x = views[:, v].squeeze(2).unsqueeze(1).repeat(1, 3, 1, 1, 1)   # (B,3,T,H,W)
-            x = F.interpolate(x, size=(T, 112, 112), mode="trilinear", align_corners=False)
-            feats.append(self.backbone(x).flatten(1))
-        return self.fc(torch.stack(feats, 1).mean(1))
-
-
-class TimeSformer(nn.Module):
-    """Basic divided space-time attention Transformer (spatial attn per frame, then
-    temporal attn across frames), per view then mean. Trained from scratch."""
-    def __init__(self, dim=192, patch=16, heads=3):
-        super().__init__()
-        self.dim = dim
-        n_p = (C.IMG_SIZE // patch) ** 2
-        self.embed = nn.Conv2d(3, dim, patch, patch)
-        self.pos = nn.Parameter(torch.zeros(1, n_p, dim)); nn.init.trunc_normal_(self.pos, std=.02)
-        self.tpos = nn.Parameter(torch.zeros(1, C.T, dim)); nn.init.trunc_normal_(self.tpos, std=.02)
-        self.cls = nn.Parameter(torch.zeros(1, 1, dim)); nn.init.trunc_normal_(self.cls, std=.02)
-        sl = nn.TransformerEncoderLayer(dim, heads, dim * 2, batch_first=True, activation="gelu")
-        self.spatial = nn.TransformerEncoder(sl, 2)
-        tl = nn.TransformerEncoderLayer(dim, heads, dim * 2, batch_first=True, activation="gelu")
-        self.temporal = nn.TransformerEncoder(tl, 2)
-        self.fc = nn.Linear(dim, 2)
-
-    def forward(self, views):
-        B, V, T = views.shape[:3]
-        outs = []
-        for v in range(V):
-            xv = _gray3(views[:, v, :, 0].reshape(B * T, 1, C.IMG_SIZE, C.IMG_SIZE))
-            p = self.embed(xv).flatten(2).transpose(1, 2) + self.pos    # (B*T,n_p,dim)
-            p = self.spatial(p).mean(1).reshape(B, T, self.dim) + self.tpos
-            p = torch.cat([self.cls.expand(B, -1, -1), p], 1)
-            outs.append(self.temporal(p)[:, 0])
-        return self.fc(torch.stack(outs, 1).mean(1))
 
 
 class MVCNN(nn.Module):
@@ -179,6 +107,5 @@ class ConvNeXtMV(nn.Module):
 
 
 def build(name):
-    return {"resnet": ResNetMV, "nnunet": NNUNetCls, "r2plus1d": R2Plus1D,
-            "timesformer": TimeSformer, "mvcnn": MVCNN, "samil": SAMIL,
+    return {"resnet": ResNetMV, "mvcnn": MVCNN, "samil": SAMIL,
             "swin": SwinMV, "convnext": ConvNeXtMV}[name]()
