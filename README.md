@@ -84,26 +84,5 @@ python comparison/aggregate_baselines.py
 python gradcam.py --fold 0
 ```
 
-## Results (etiology, patient-level 5-fold, mean +/- std %)
-| Method | AUC | AP | ACC | F1 | ECE ↓ |
-|---|---|---|---|---|---|
-| ResNet   | 77.8 | 77.6 | 66.1 | 61.9 | 26.2 |
-| MVCNN    | 76.7 | 74.9 | 70.6 | 64.3 | 20.5 |
-| SAMIL    | 79.6 | 75.6 | 72.9 | 69.3 | 22.3 |
-| Swin     | 78.0 | 74.5 | 69.3 | 67.9 | 25.4 |
-| ConvNeXt | 81.1 | 79.3 | 75.1 | 70.8 | 22.7 |
-| **CA-EviNet (ours)** | **82.6** | **81.5** | 73.3 | 69.4 | **10.0** |
-
-## Citation
-```bibtex
-@article{caevinet2026,
-  title   = {Conflict-aware Evidential Learning for Reliable and Interpretable
-             Multi-view TEE Characterization of Mitral Valve Pathology},
-  author  = {Zhao, Jianfeng and others},
-  journal = {IEEE Transactions on Medical Imaging},
-  year    = {2026}
-}
-```
-
 ## License
 Released under the MIT License (see `LICENSE`).
