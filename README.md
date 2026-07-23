@@ -1,17 +1,20 @@
 # CA-EviNet
 
-**Conflict-aware Evidential Learning for Reliable and Interpretable Multi-view Transesophageal Echocardiographic Characterization of Mitral Regurgitation Etiology**
+**Conflict-aware Evidential Aggregation for Multi-view TEE Characterization of Mitral Regurgitation Etiology**
 
-Official PyTorch implementation of the paper *"Conflict-aware Evidential Learning for
-Reliable and Interpretable Multi-view TEE Characterization of Mitral Valve Pathology"*.
+Official PyTorch implementation of the paper *"Conflict-aware Evidential Aggregation for
+Multi-view TEE Characterization of Mitral Regurgitation Etiology"*.
 
-CA-EviNet characterizes the **functional-vs-degenerative mitral regurgitation etiology**
+CA-EviNet characterizes the **functional-versus-degenerative mitral regurgitation etiology**
 from three routine grayscale TEE views (2CH/3CH/4CH). Each view is encoded by a shared
-per-frame ViT + temporal Transformer; a per-view **evidential head** estimates a Dirichlet
-uncertainty; a **conflict-aware Reliable Aggregation Layer (RAL)** fuses the views by their
-uncertainty and inter-view conflict; and an **auxiliary branch** regresses four clinically
-used valve measurements (leaflet-to-annulus angles, tenting area, flail width) for
-interpretability.
+per-frame ViT and a temporal Transformer, and a per-view **evidential head** parameterizes a
+Dirichlet distribution that gives a per-view probability and uncertainty. A **conflict-aware
+Reliable Aggregation Layer (RAL)** then measures the inter-view conflict with a total-variation
+distance decoupled from confidence and attenuates a discordant view's evidence *before* the
+evidence is aggregated, so a conflicting view contributes less and the fused decision stays
+**well calibrated** under view disagreement. In parallel, an **auxiliary branch** regresses four
+clinically used valve measurements (leaflet-to-annulus angles, tenting area, flail width) as
+clinically grounded, verifiable outputs.
 
 ## Repository structure
 ```
@@ -20,7 +23,7 @@ data_split.py        patient-level stratified 5-fold split
 dataset.py           multi-view keyframe loader
 model.py             CA-EviNet (FrameViT + temporal enc + evidential heads + RAL + quant)
 losses.py            evidential (Bayes-risk + capped KL) + masked-Huber quantification
-metrics.py           AUC/AP/ACC/F1, ECE/Brier, AURC, per-measurement MAE/RMSE/r
+metrics.py           AUC/AP/ACC/F1, ECE, AURC, per-measurement MAE/RMSE/r
 train.py             train/evaluate one fold (records history, checkpoints, analysis)
 aggregate.py         cross-fold mean +/- std
 gradcam.py           Grad-CAM for the aggregated evidence
@@ -61,7 +64,7 @@ python aggregate.py                 # prints and saves cross-fold mean +/- std
 single-view ablations, over all 5 folds:
 ```bash
 # module ablations
-for a in noquant notemporal noview noconflict noevidential; do
+for a in noquant noview noconflict noevidential; do
   for f in 0 1 2 3 4; do CAE_ABLATE=$a CAE_TAG=abl_$a python train.py --fold $f; done
 done
 # view ablations (single chamber view)
@@ -79,7 +82,7 @@ done
 python comparison/aggregate_baselines.py
 ```
 
-**Step 4 — Grad-CAM (qualitative interpretability).**
+**Step 4 — Grad-CAM (qualitative check).**
 ```bash
 python gradcam.py --fold 0
 ```
